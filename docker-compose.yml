@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - bluebox_net
+      - orchestration_net
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.15.0
@@ -33,7 +33,7 @@ services:
       elasticsearch:
         condition: service_healthy
     networks:
-      - bluebox_net
+      - orchestration_net
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.0
@@ -49,8 +49,9 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - bluebox_net
-    mem_limit: 1g
+      - orchestration_net
+    mem_limit: 2g
+    cpus: 4
 
   nginx:
     image: nginx:latest
@@ -62,7 +63,7 @@ services:
     depends_on:
       - kibana
     networks:
-      - bluebox_net
+      - orchestration_net
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.0
@@ -71,15 +72,36 @@ services:
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ./var/log:/var/log/readonly:ro
+      - ./var/log/suricata:/var/log/suricata:ro
     depends_on:
       - logstash
     networks:
-      - bluebox_net
+      - orchestration_net
+
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: suricata
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    networks:
+      - orchestration_net
+    volumes:
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./suricata/classification.config:/etc/suricata/classification.config
+      - ./suricata/reference.yaml:/etc/suricata/reference.yaml
+      - ./suricata/rules/custom.rules:/etc/suricata/rules/custom.rules
+      - ./var/log/suricata:/var/log/suricata
+    environment:
+      - SURICATA_OPTIONS=-i eth0 -v
+    depends_on:
+      - filebeat
 
 volumes:
   esdata:
     driver: local
 
 networks:
-  bluebox_net:
-    driver: bridge
+  orchestration_net:
+    external: true

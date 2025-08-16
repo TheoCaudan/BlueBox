@@ -1,0 +1,36 @@
+%YAML 1.1
+---
+vars:
+  address-groups:
+    HOME_NET: "[192.168.11.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.yaml
+
+outputs:
+  - eve-log:
+      enabled: true
+      filetype: regular
+      filename: /var/log/suricata/eve.json
+      types:
+        - alert
+        - http
+        - dns
+        - tls
+        - flow
+  - stats:
+      enabled: false
+
+af-packet:
+  - interface: eth0
+    threads: auto
+    defrag: yes
+    checksum-checks: no
+    tpacket-v3: yes
+
+rule-files:
+  - /etc/suricata/rules/custom.rules
